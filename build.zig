@@ -29,9 +29,11 @@ pub fn build(b: *std.Build) void {
     // This creates another `std.Build.Step.Compile`, but this one builds an executable
     // rather than a static library.
     const exe = b.addExecutable(.{
-        .name = "b64",
+        .name = "zbase64",
         .root_module = exe_mod,
     });
+
+    exe.root_module.addImport("args", b.dependency("args", .{ .target = target, .optimize = optimize }).module("args"));
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
