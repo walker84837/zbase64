@@ -55,13 +55,16 @@ pub fn main() !void {
     }
 
     const infile = if (parsed.positionals.len > 0) parsed.positionals[0] else "-";
-    const reader = if (std.mem.eql(u8, infile, "-")) {
-        return std.io.getStdIn().reader();
+    var r: std.fs.File.Reader = undefined;
+
+    if (std.mem.eql(u8, infile, "-")) {
+        r = std.io.getStdIn().reader();
     } else {
-        const file = try std.fs.cwd().openFile(infile, .{ .read = true });
+        const file = try std.fs.cwd().openFile(infile, .{ .mode = .read_only });
         defer file.close();
-        return file.reader();
-    };
+        r = file.reader();
+    }
+    const reader = r;
 
     const stdout = std.io.getStdOut().writer();
 
@@ -71,38 +74,30 @@ pub fn main() !void {
 
     // 5) Branch on encode vs decode
     if (opts.decode) {
-        // Choose decoder (with or without ignore-garbage)
-        var decoder = if (opts.@"ignore-garbage") {
-            // ignore common “garbage” like whitespace/newlines
-            return base64.Base64DecoderWithIgnore.init(
-                base64.standard_alphabet_chars,
-                '=',
-                [_]u8{ '\n', '\r', ' ', '\t' },
-            );
+        if (opts.@"ignore-garbage") {
+            const ignore = [_]u8{ '\n', '\r', ' ', '\t' };
+            var decoder_with_ignore = base64.Base64DecoderWithIgnore.init(base64.standard_alphabet_chars, '=', &ignore);
+            const maxOut = try decoder_with_ignore.calcSizeUpperBound(input.len);
+            const outBuf = try allocator.alloc(u8, maxOut);
+            const outLen = try decoder_with_ignore.decode(outBuf, input);
+            try stdout.writeAll(outBuf[0..outLen]);
         } else {
-            return base64.Base64Decoder.init(base64.standard_alphabet_chars, '=');
-        };
-
-        // Figure out how big the output can be, allocate, then decode
-        const maxOut = try decoder.calcSizeUpperBound(&decoder, input.len);
-        const outBuf = try allocator.alloc(u8, maxOut);
-        const outLen = if (opts.@"ignore-garbage") {
-            return decoder.decode(&decoder, outBuf, input);
-        } else unreachable;
-
-        try stdout.writeAll(outBuf[0..outLen]);
+            var decoder = base64.Base64Decoder.init(base64.standard_alphabet_chars, '=');
+            const exactSize = try decoder.calcSizeForSlice(input);
+            const outBuf = try allocator.alloc(u8, exactSize);
+            try decoder.decode(outBuf, input);
+            try stdout.writeAll(outBuf);
+        }
     } else {
-        // ENCODE
         var encoder = base64.Base64Encoder.init(base64.standard_alphabet_chars, '=');
-        const encSize = base64.Base64Encoder.calcSize(&encoder, input.len);
+        const encSize = encoder.calcSize(input.len);
         const encBuf = try allocator.alloc(u8, encSize);
-        const encSlice = base64.Base64Encoder.encode(&encoder, encBuf, input);
+        const encSlice = encoder.encode(encBuf, input);
 
-        // Apply line-wrapping if requested
         if (opts.wrap != 0) {
             var idx: usize = 0;
             while (idx < encSlice.len) : (idx += opts.wrap) {
-                const len = std.math.min(opts.wrap, encSlice.len - idx);
+                const len = min(opts.wrap, encSlice.len - idx);
                 try stdout.writeAll(encSlice[idx .. idx + len]);
                 try stdout.writeAll("\n");
             }
@@ -110,4 +105,8 @@ pub fn main() !void {
             try stdout.writeAll(encSlice);
         }
     }
+}
+
+pub fn min(a: anytype, b: anytype) @TypeOf(a, b) {
+    return if (a < b) a else b;
 }
