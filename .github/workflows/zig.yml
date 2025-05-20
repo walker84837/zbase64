@@ -25,7 +25,7 @@ jobs:
           curl -sSL https://ziglang.org/download/index.json -o index.json
           TAR_URL=$(jq -r '
             . as $all
-            # build an array of semver tags (no “master”)
+            # build an array of semver tags (no "master")
             | [ $all
                 | keys[]
                 | select(. != "master")

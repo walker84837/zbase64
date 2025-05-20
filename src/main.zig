@@ -6,21 +6,16 @@ pub const VERSION = "0.1.0";
 
 const Base64Error = error{InvalidInput};
 
-fn printUsage(executable_name: ?[:0]const u8) void {
-    const name = executable_name orelse "zbase64";
-
-    std.debug.print(
-        "Usage: {s} [OPTION]... [FILE]\n" ++
-            "With no FILE, or when FILE is -, read standard input.\n\n" ++
-            "Mandatory arguments to long options are mandatory for short options too.\n" ++
-            "  -d, --decode          decode data\n" ++
-            "  -i, --ignore-garbage  when decoding, ignore non-alphabet characters\n" ++
-            "  -w, --wrap=COLS       wrap encoded lines after COLS characters (default 76).\n" ++
-            "                          Use 0 to disable line wrapping\n" ++
-            "      --help            display this help and exit\n" ++
-            "      --version         output version information and exit\n",
-        .{name},
-    );
+fn printUsage() void {
+    std.debug.print("Usage: zbase64 [OPTION]... [FILE]\n" ++
+        "With no FILE, or when FILE is -, read standard input.\n\n" ++
+        "Mandatory arguments to long options are mandatory for short options too.\n" ++
+        "  -d, --decode          decode data\n" ++
+        "  -i, --ignore-garbage  when decoding, ignore non-alphabet characters\n" ++
+        "  -w, --wrap=COLS       wrap encoded lines after COLS characters (default 76).\n" ++
+        "                          Use 0 to disable line wrapping\n" ++
+        "      --help            display this help and exit\n" ++
+        "      --version         output version information and exit\n", .{});
 }
 
 const Options = struct {
@@ -47,9 +42,8 @@ pub fn main() !void {
     defer parsed.deinit();
 
     const opts = parsed.options;
-    const executable_name = parsed.executable_name;
     if (opts.help) {
-        printUsage(executable_name);
+        printUsage();
         return;
     }
     if (opts.version) {
