@@ -2,7 +2,7 @@
 
 > Zig port of the `base64` command-line utility
 
-A thin wrapper around Zig's [std.base64](https://ziglang.org/documentation/0.14.0/std/#std.base64) de/encoder. Because it uses only the Zig standard library, it should compile anywhere Zig does.
+A thin wrapper around Zig's [std.base64](https://ziglang.org/documentation/0.14.0/std/#std.base64) de/encoder. Because it mainly uses just the Zig standard library, it should compile anywhere Zig does.
 
 ## Table of Contents
 
@@ -113,7 +113,7 @@ cat picture.b64 | zbase64 -d > picture_decoded.png
 
 ## Validation
 
-I added a thin function to check whether the base64 is valid only if:
+I added a short function to check whether the base64 is valid only if:
 
 1. The input is non-empty
 2. Its length is a multiple of 4.
@@ -135,6 +135,8 @@ This will execute the built-in tests, including:
 - `isBase64Valid` on valid and clearly invalid strings
 
 ## Contributing
+
+If you find any inconsistency with the coreutils `base64` command, you're very encouranged to open a pull request or open an issue.
 
 Bug reports and pull requests are welcome! Please open an issue first if you're planning a big change. Follow [Zig's naming conventions](ziglang.org/documentation/master/#Style-Guide) and add tests for new functionality.
 
