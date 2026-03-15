@@ -56,8 +56,7 @@ pub fn main() !void {
     var input: []const u8 = undefined;
 
     if (std.mem.eql(u8, infile, "-")) {
-        const stdin_reader = std.io.getStdIn().reader();
-        input = try stdin_reader.readAllAlloc(allocator, 4096);
+        input = try std.fs.File.stdin().readToEndAlloc(allocator, 4096);
     } else {
         input = try std.fs.cwd().readFileAlloc(allocator, infile, 4096);
     }
@@ -68,17 +67,18 @@ pub fn main() !void {
 
     defer allocator.free(input);
 
-    const stdout = std.io.getStdOut().writer();
+    var stdout_buffer: [4096]u8 = undefined;
+    var stdout = std.fs.File.stdout().writer(&stdout_buffer);
 
     // now dispatch to encode/decode just as before:
     if (opts.decode) {
-        try decodeBase64(allocator, opts, input, stdout);
+        try decodeBase64(allocator, opts, input, &stdout.interface);
     } else {
-        try encodeBase64(allocator, opts, input, stdout);
+        try encodeBase64(allocator, opts, input, &stdout.interface);
     }
 }
 
-fn encodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, stdout: std.fs.File.Writer) !void {
+fn encodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, stdout: *std.io.Writer) !void {
     var encoder = base64.Base64Encoder.init(base64.standard_alphabet_chars, '=');
     const encoder_size = encoder.calcSize(input.len);
     const encoder_buffer = try allocator.alloc(u8, encoder_size);
@@ -94,9 +94,10 @@ fn encodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, 
     } else {
         try stdout.writeAll(encoder_slice);
     }
+    try stdout.flush();
 }
 
-fn decodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, stdout: std.fs.File.Writer) !void {
+fn decodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, stdout: *std.io.Writer) !void {
     var ignore_buffer: [4]u8 = undefined;
     ignore_buffer[0] = '\n';
     ignore_buffer[1] = '\r';
@@ -115,6 +116,7 @@ fn decodeBase64(allocator: std.mem.Allocator, opts: Options, input: []const u8, 
     const output_buffer = try allocator.alloc(u8, max_output);
     const output_length = try decoder.decode(output_buffer, input);
     try stdout.writeAll(output_buffer[0..output_length]);
+    try stdout.flush();
 }
 
 pub fn isBase64Valid(input: []const u8) bool {
